@@ -1,137 +1,148 @@
-// https://www.survivingwithandroid.com/esp32-mqtt-client-publish-and-subscribe/
 #include <arduino.h>
 #include <ESP8266WiFi.h>
 #include <DHT.h>
 #include <DHT_U.h>
-// #include <PubSubClient.h>
-//  https://github.com/knolleary/pubsubclient
+#include <PubSubClient.h>
 
-// Pin def
+// Pin def.
 const int DHT_PIN = 13;
 const int POT_PIN = A0;
 
-// const def
+// const def.
 const bool DEBUG = true;
 const int POT_MAX = 1024;
 const int POT_MIN = 15;
 
-// WiFi def
-const char *SSID = "Redmi Note 9";
-const char *PWD = "12345678";
+// WiFi credentials def.
+const char *SSID = "Redmi Note 10 Pro";
+const char *PWD = "chipouille";
 
-// MQTT client def
-// https://www.hivemq.com/blog/mqtt-raspberrypi-part01-sensor-data-hivemqcloud-java-pi4j/
-const WiFiClient wifiClient;
-// const PubSubClient mqttClient(wifiClient);
-const char *mqttServer = "";
-const int mqttPort = 9999;
+// MQTT client def.
+const char *mqttServer = "192.168.241.215";
+const int mqttPort = 1883;
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
+const String clientId = "ESP8266Client";
+const String user = "jules";
+const String pwd = "juju";
 
-// Sensors detection delay
-uint32_t delayMS;
-
-// DHT sensor def
+// DHT sensor def.
 DHT dht(DHT_PIN, DHT11);
 
-// Creates a connection to the declared WiFi
+// Creates a connection using declared WiFi credentials.
 void connectToWiFi()
 {
-  Serial.print("Connecting to ");
-
-  // Begins connection to declared SSID using declared PWD
-  WiFi.begin(SSID, PWD);
+  Serial.print("\nConnecting to ");
   Serial.println(SSID);
 
-  Serial.print("Connected.");
+  // Begins connection to declared SSID using declared PWD.
+  WiFi.begin(SSID, PWD);
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nConnected.");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+  Serial.println();
 }
 
-// Set up the MQTT client to communicate with the RasPi
-/*
-void setupMQTT()
-{
-  mqttClient.setServer(mqttServer, mqttPort);
-  // set the callback function
-  mqttClient.setCallback(callback);
-}
-
-// Connects the ESP to the Hivemq MQTT broker
+// Connects to the mqtt Broker
 void connectToBroker()
 {
-  Serial.println("Connecting to MQTT Broker...");
+  // Setting the server on which the broker is installed.
+  mqttClient.setServer(mqttServer, mqttPort);
+
+  // setting the callback function.
+  // mqttClient.setCallback(callback);
+
+  // Connecting to the MQTT broker.
+  Serial.println("Connecting to MQTT Broker");
   while (!mqttClient.connected())
   {
-    Serial.println("Reconnecting to MQTT Broker..");
-    String clientId = "ESP32Client-";
-    clientId += String(random(0xffff), HEX);
+    delay(500);
+    Serial.print(".");
 
-    if (mqttClient.connect(clientId.c_str()))
+    // Connecting to the mqtt broker using the clientId.
+    if (mqttClient.connect(clientId.c_str(), user.c_str(), pwd.c_str()))
     {
-      Serial.println("Connected.");
-      // subscribe to topic
-      mqttClient.subscribe("/swa/commands");
+      Serial.println("\nConnected.\n");
+      // subscribe to topic.
+      // mqttClient.subscribe("CurrentDateTime");
     }
   }
-}
-*/
-
-float fahrenheitToCelsius(float fahrenheit)
-{
-  float celsius;
-
-  celsius = (fahrenheit - 32.0) * 5.0 / 9.0;
-  return celsius;
 }
 
 void setup()
 {
   Serial.begin(115200);
-  // connectToWiFi();
-  // setupMQTT();
+  Serial.println("\nStart\n-----------------------------------------");
+  // Connecting to WiFi.
+  connectToWiFi();
+
+  // Connecting to MQTT broker.
+  connectToBroker();
+
+  // Setting DHT pins and pinMode.
   dht.begin();
-  /*
-  dht.temperature().getSensor(&sensor);
-  Serial.println(F("Temperature:"));
-  Serial.print(F("Max Value:   "));
-  Serial.print(fahrenheitToCelsius(sensor.max_value));
-  Serial.println(F("°C"));
-  Serial.print(F("Min Value:   "));
-  Serial.print(fahrenheitToCelsius(sensor.min_value));
-  Serial.println(F("°C"));
-  Serial.print(F("Resolution:  "));
-  Serial.print(fahrenheitToCelsius(sensor.resolution));
-  Serial.println(F("°C"));
-  Serial.println(F("------------------------------------"));
-  // Hygro sensor
-  dht.humidity().getSensor(&sensor);
-  Serial.println(F("Humidity:"));
-  Serial.print(F("Max Value:   "));
-  Serial.print(sensor.max_value);
-  Serial.println(F("%"));
-  Serial.print(F("Min Value:   "));
-  Serial.print(sensor.min_value);
-  Serial.println(F("%"));
-  Serial.print(F("Resolution:  "));
-  Serial.print(sensor.resolution);
-  Serial.println(F("%"));
-  Serial.println(F("------------------------------------"));
-  */
 }
+
+// Attempts to publish a message to the MQTT broker.
 
 void loop()
 {
-  // establishing connection to the WiFi
-  // connectToWiFi();
-  // setting up MQTT client
+  // Reconnect to WiFi if connection died.
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    connectToWiFi();
+  }
 
-  int potValue = analogRead(POT_PIN);
-  float potRatio = float(potValue) / float(POT_MAX);
+  // Reconnect to mqtt broker if connection died.
+  if (!mqttClient.connected())
+  {
+    connectToBroker();
+  }
 
   // Delay between measurements.
-  int delayMS = 800;
-  delay(delayMS);
+  int msDelay = 4000;
+  delay(msDelay);
+
+  // Data acquisition
+  // Get Pot value.
+  int potValue = analogRead(POT_PIN);
+  float potRatio = float(potValue) / float(POT_MAX);
   // Get temperature.
   float temp = dht.readTemperature();
   // Get humidity.
   float hum = dht.readHumidity();
+
+  // Publish data on topic using MQTT.
+  char TemperatureDataMessage[6];
+  dtostrf(temp, 5, 2, TemperatureDataMessage);
+  char HumidityDataMessage[6];
+  dtostrf(hum, 5, 2, HumidityDataMessage);
+
+  Serial.println("Attempting to publish Temperature data.");
+  if (mqttClient.publish("ESPTemp", TemperatureDataMessage))
+  {
+    Serial.println("Message published!\n");
+  }
+  else
+  {
+    Serial.println("Publication failed!\n");
+    Serial.println(mqttClient.state());
+  }
+  Serial.println("Attempting to publish Humidity data.");
+  if (mqttClient.publish("ESPHum", HumidityDataMessage))
+  {
+    Serial.println("Message published!\n");
+  }
+  else
+  {
+    Serial.println("Publication failed!\n");
+    Serial.println(mqttClient.state());
+  }
 
   if (DEBUG)
   {
