@@ -119,7 +119,7 @@ void loop()
 
   // Publish data on topic using MQTT.
   char TemperatureDataMessage[6];
-  dtostrf(temp, 5, 2, TemperatureDataMessage);
+  dtostrf(temp * potRatio, 5, 2, TemperatureDataMessage);
   char HumidityDataMessage[6];
   dtostrf(hum, 5, 2, HumidityDataMessage);
 
