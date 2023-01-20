@@ -3,6 +3,7 @@
 #include <DHT.h>
 #include <DHT_U.h>
 #include <PubSubClient.h>
+#include <ctime>
 
 // Pin def.
 const int DHT_PIN = 13;
@@ -29,6 +30,10 @@ const String pwd = "juju";
 // DHT sensor def.
 DHT dht(DHT_PIN, DHT11);
 
+int hourFormat12(time_t (*time)(time_t *));
+
+int hourFormat24();
+
 // Creates a connection using declared WiFi credentials.
 void connectToWiFi()
 {
@@ -46,6 +51,42 @@ void connectToWiFi()
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
   Serial.println();
+}
+// function sleep between measurements by recreating the connections at each awakening
+void sleep()
+{
+    Serial.println("Going to sleep now");
+    delay(1000);
+    ESP.deepSleep(5 * 60 * 1000000);
+}
+// function to make esp active only at night and sleep during the day
+bool isNight()
+{
+    int hour = hourFormat12(time);
+    if (hour >= 18 || hour <= 6)
+    {
+        return true;
+    }
+    return false;
+}
+
+int hourFormat12(time_t (*time)(time_t *)) {
+    return 0;
+}
+
+// function to get the hour in 12h format
+int hourFormat12()
+{
+    int hour = hourFormat24();
+    if (hour > 12)
+    {
+        hour -= 12;
+    }
+    return hour;
+}
+
+int hourFormat24() {
+    return 0;
 }
 
 // Connects to the mqtt Broker
@@ -73,6 +114,7 @@ void connectToBroker()
     }
   }
 }
+
 
 void setup()
 {
