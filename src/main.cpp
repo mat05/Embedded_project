@@ -105,7 +105,7 @@ void loop()
   }
 
   // Delay between measurements.
-  int msDelay = 2000;
+  int msDelay = 4000;
   delay(msDelay);
 
   // Data acquisition
